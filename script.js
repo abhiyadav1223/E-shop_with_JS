@@ -59,7 +59,8 @@ function signInAction(emailInput, passwordInput) {
   var password = passwordInput.value;
   var userList = JSON.parse(localStorage.getItem("user-list"));
   var user = userList.find((user) => { return user.email == email && user.password == password });
-  user ? DashBoardComponent() : window.alert("Invalid email id and password");
+  user ? DashBoardComponent(user) : window.alert("Invalid email id and password");
+  localStorage.setItem("current-user", JSON.stringify(user));
 }
 function DashBoardComponent() {
   var mainDiv = document.getElementById("main");
@@ -118,15 +119,21 @@ function HeaderComponent(mainDiv, header) {
   cartLogoDiv.setAttribute("style", "height:20px;")
   var cartLogo = document.createElement("i");
   cartLogo.setAttribute("class", "fa-solid fa-cart-shopping")
-  cartLogo.setAttribute("style", "font-size:18px")
+  cartLogo.setAttribute("style", "font-size:18px;cursor:pointer")
+  cartLogo.addEventListener('click', () => {
+    shopCartComponent()
+  })
   cartLogoDiv.appendChild(cartLogo)
   menuDiv.appendChild(cartLogoDiv);
 
   var menuLogoDiv = document.createElement("div")
   menuLogoDiv.setAttribute("style", "height:20px;")
   var menuLogo = document.createElement("i");
-  menuLogo.setAttribute("class", "fa-solid fa-bars")
+  menuLogo.setAttribute("class", "fa-solid fa-right-from-bracket")
   menuLogo.setAttribute("style", "font-size:18px")
+  menuLogo.addEventListener('click', () => {
+    logoutFunc();
+  })
   menuLogoDiv.appendChild(menuLogo)
   menuDiv.appendChild(menuLogoDiv);
 
@@ -236,9 +243,10 @@ function CardComponent(productList) {
     var buttonDiv = document.createElement("div");
 
     var CartButton = document.createElement("button")
-    CartButton.setAttribute("id", "cartButton")
+    CartButton.setAttribute("value", product.id);
+    // CartButton.setAttribute("class", "cartButton")
     CartButton.innerText = "Add to Cart"
-    CartButton.setAttribute("class", "btn btn-sm btn-success my-3")
+    CartButton.setAttribute("class", " cartButton btn btn-sm btn-success my-3")
 
     CartButton.addEventListener('click', () => {
       addToCartComponent(product);
@@ -250,7 +258,6 @@ function CardComponent(productList) {
   cardContainer.appendChild(cardRow);
 
   document.getElementById('data-head').appendChild(cardContainer);
-
 }
 function SignUpComponent(mainDiv) {
   mainDiv.innerHTML = "";
@@ -328,10 +335,245 @@ function loadData() {
 }
 
 function addToCartComponent(product) {
-  var cartButton = document.getElementById("cartButton");
-  let flag = true;
-  if (flag) {
-    cartButton.innerText = "Add More"
-    flag = false
+  var currentUser = JSON.parse(localStorage.getItem("current-user"));
+  var cartList = JSON.parse(localStorage.getItem("cart-list"));
+
+  var index = cartList.findIndex((cartItem) => { return cartItem.email == currentUser.email });
+
+  if (index != -1) {
+    var cart = cartList[index];
+    var data = cart.cartList.find((item) => {
+      return item.item.id == product.id;
+    })
+    if (data) {
+      alert("already exits")
+    }
+    else {
+      cart.cartList.push({ item: product, quantity: 1 })
+      cartList.splice(index, 1);
+      cartList.splice(index, 0, cart);
+      localStorage.setItem("cart-list", JSON.stringify(cartList));
+      alert("added")
+    }
+
   }
+  else {
+    cartList.push({ email: currentUser.email, cartList: [{ item: product, quantity: 1 }] })
+    localStorage.setItem("cart-list", JSON.stringify(cartList));
+    alert("added")
+  }
+}
+
+function shopCartComponent() {
+  let cartList = JSON.parse(localStorage.getItem("cart-list"))
+  let currentUser = JSON.parse(localStorage.getItem("current-user"))
+  var datahead = document.getElementById("data-head");
+  datahead.innerHTML = ""
+  datahead.setAttribute("class", "d-flex justify-content-around")
+
+  var backBtnDiv = document.createElement("div")
+  backBtnDiv.setAttribute("style", "height:20px;cursor:pointer")
+  var backBtnLogo = document.createElement("i");
+  backBtnLogo.setAttribute("class", "fa-solid fa-circle-left")
+  backBtnLogo.setAttribute("style", "font-size:18px")
+  backBtnLogo.addEventListener('click', () => {
+    backToHomeComp();
+  })
+  backBtnDiv.appendChild(backBtnLogo)
+  datahead.appendChild(backBtnDiv)
+
+  var tableDiv = document.createElement("div");
+
+  tableDiv.setAttribute("style", "box-shadow:0px 0px 2px black;width:60%")
+  var table = document.createElement("table");
+  table.setAttribute("class", "table table-hover")
+
+  var thead = document.createElement("thead")
+  thead.setAttribute("class", "bg-warning")
+  thead.setAttribute("style", "box-shadow:0 0 2px black")
+  var tr = document.createElement("tr");
+
+  var th1 = document.createElement("th");
+  th1.innerText = "Sr No."
+  tr.appendChild(th1)
+  var th2 = document.createElement("th");
+  th2.innerText = "name"
+  tr.appendChild(th2)
+  var th3 = document.createElement("th");
+  th3.innerText = "price"
+  tr.appendChild(th3)
+  var th4 = document.createElement("th");
+  th4.innerText = "Qty"
+  tr.appendChild(th4)
+  var th5 = document.createElement("th");
+  th5.innerText = "total"
+  tr.appendChild(th5)
+
+  var th6 = document.createElement("th");
+  th6.innerText = "remove"
+  tr.appendChild(th6)
+
+  thead.appendChild(tr);
+  table.appendChild(thead);
+
+  var tbody = document.createElement("tbody");
+
+  tbody.setAttribute("class", "font-weight-bold")
+  let check = cartList.find((user) => { return user.email == currentUser.email })
+  if (check) {
+    let itemArray = check.cartList;
+    if (itemArray.length != 0) {
+
+      itemArray.forEach((EachItem) => {
+        var tr = document.createElement("tr");
+
+        var td1 = document.createElement("td");
+        td1.innerText = EachItem.item.id;
+        tr.appendChild(td1);
+
+        var td2 = document.createElement("td");
+        td2.innerText = EachItem.item.title;
+        tr.appendChild(td2);
+
+        var td3 = document.createElement("td");
+        td3.innerText = EachItem.item.price;
+        tr.appendChild(td3);
+
+        var td4 = document.createElement("td");
+        td4.setAttribute("style", "width:30%")
+        var qtyInput = document.createElement("input");
+        qtyInput.setAttribute("key", EachItem.item.id)
+        qtyInput.setAttribute("type", "number")
+        qtyInput.setAttribute("class", "rounded-lg")
+        qtyInput.setAttribute("style", "width:30%")
+        qtyInput.setAttribute("min", 0)
+        qtyInput.value = EachItem.quantity;
+        qtyInput.addEventListener('input', (e) => {
+          setQuantity(qtyInput, itemArray, td5);
+        })
+        td4.appendChild(qtyInput)
+        tr.appendChild(td4);
+
+        var td5 = document.createElement("td");
+        td5.setAttribute("id", "totalAmount");
+        td5.innerText = EachItem.item.price * EachItem.quantity;
+        tr.appendChild(td5);
+
+        var td6 = document.createElement("td");
+        td6.setAttribute("style", "cursor:pointer")
+        td6.setAttribute("class", "fa-solid fa-trash")
+        td6.setAttribute("key", EachItem.item.id)
+        td6.addEventListener('click', () => {
+          deleteItem(td6);
+        })
+        tr.appendChild(td6);
+
+        tbody.appendChild(tr);
+      })
+    }
+    else {
+      tbody.innerText = "No Data found..."
+    }
+  }
+  else {
+    tbody.innerText = "No user found..."
+  }
+  table.appendChild(tbody);
+  tableDiv.appendChild(table);
+
+  let checkOutBox = document.createElement("div");
+  checkOutBox.setAttribute("style", "width:20%;height:200px;box-shadow:0px 0px 3px black ;")
+  checkOutBox.setAttribute("class", "rounded d-flex flex-column align-items-center justify-content-between")
+
+  var headLabel = document.createElement("h5");
+  headLabel.setAttribute("style", "width:100%;border-bottom:2px solid black")
+  headLabel.setAttribute("class", "bg-warning py-2 text-center")
+  headLabel.innerText = "Invoice Summery";
+  checkOutBox.appendChild(headLabel)
+
+  var qtyLabel = document.createElement("h5");
+  qtyLabel.setAttribute("id", "totalQty");
+  // qtyLabel.innerText = "total items : 0";
+  checkOutBox.appendChild(qtyLabel)
+
+  var amountLabel = document.createElement("h5");
+  amountLabel.setAttribute("id", "ChecktotalAmount");
+  // amountLabel.innerText = "total amount : 0";
+  checkOutBox.appendChild(amountLabel)
+
+  var checkOutBtn = document.createElement("button");
+  checkOutBtn.setAttribute("class", "btn btn-success font-weight-bold mb-2");
+  checkOutBtn.setAttribute("style", "width:40%");
+  checkOutBtn.innerText = "checkout";
+  checkOutBox.appendChild(checkOutBtn);
+  datahead.appendChild(tableDiv);
+  datahead.appendChild(checkOutBox);
+  setCheckOutData(check);
+}
+
+function setQuantity(qtyInput, item, td5) {
+  let cartList = JSON.parse(localStorage.getItem("cart-list"));
+  let currentUser = JSON.parse(localStorage.getItem("current-user"));
+  let itemKey = qtyInput.getAttribute("key");
+  let check = item.find((prod) => {
+    return prod.item.id == itemKey;
+  })
+  if (check) {
+    td5.innerText = +qtyInput.value * check.item.price;
+    let flag = cartList.find((item) => item.email == currentUser.email)
+    if (flag) {
+      let obj = flag.cartList.find((val) => val.item.id == itemKey);
+      if (obj) {
+        obj.quantity = +qtyInput.value
+        setCheckOutData(flag);
+      }
+      else {
+        console.log(obj);
+      }
+    }
+  } else {
+    alert("Item not found")
+  }
+  localStorage.setItem("cart-list", JSON.stringify(cartList));
+}
+
+function setCheckOutData(flag) {
+  let totalQty = document.getElementById("totalQty");
+  let totalAmount = document.getElementById("ChecktotalAmount");
+  var ttlAmt = 0
+  var ttlQty = 0
+  for (let item of flag.cartList) {
+    ttlQty += item.quantity;
+    ttlAmt += item.item.price * item.quantity;
+  }
+  totalQty.innerText = `total items : ${ttlQty}`;
+  totalAmount.innerText = `total amount : ${ttlAmt}`
+}
+
+function deleteItem(td6) {
+  let cartList = JSON.parse(localStorage.getItem("cart-list"));
+  let currentUser = JSON.parse(localStorage.getItem("current-user"));
+  let key = td6.getAttribute("key");
+
+  let check = cartList.find((user) => { return user.email == currentUser.email })
+
+  let flag = check.cartList.filter((item) => {
+    console.log(key);
+    return item.item.id != key
+  })
+  check.cartList = flag;
+  localStorage.setItem('cart-list', JSON.stringify(cartList));
+  alert("Item Removed");
+  shopCartComponent()
+}
+
+function logoutFunc() {
+  localStorage.setItem("current-user", "{}");
+  SignInComponent();
+}
+
+function backToHomeComp() {
+  let dataHead = document.getElementById("data-head");
+  dataHead.innerHTML = ""
+  CardComponent(JSON.parse(localStorage.getItem("product-list")));
 }
